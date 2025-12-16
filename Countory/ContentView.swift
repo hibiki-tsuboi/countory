@@ -19,18 +19,25 @@ struct ContentView: View {
     @Query(sort: \Category.name) private var categories: [Category]
     
     @State private var currentSort: SortOption = .byDate
-    @State private var filterCategory: Category? = nil
+    @State private var filterCategoryName: String? = nil // Changed from Category?
     
     @State private var isShowingItemSheet = false
     @State private var itemToEdit: Item?
+    @State private var searchText = ""
     
     private var filteredAndSortedItems: [Item] {
-        // Filter first
+        // Apply search filter first
+        var processedItems = items
+        if !searchText.isEmpty {
+            processedItems = processedItems.filter { $0.name.localizedStandardContains(searchText) }
+        }
+        
+        // Apply category filter using name
         let filteredItems: [Item]
-        if let category = filterCategory {
-            filteredItems = items.filter { $0.category == category }
+        if let categoryName = filterCategoryName {
+            filteredItems = processedItems.filter { $0.category?.name == categoryName }
         } else {
-            filteredItems = items
+            filteredItems = processedItems
         }
         
         // Then sort
@@ -55,7 +62,7 @@ struct ContentView: View {
                         ContentUnavailableView(
                             "No Items",
                             systemImage: "shippingbox.fill",
-                            description: Text(filterCategory == nil ? "Tap the + button to add your first item." : "No items in this category.")
+                            description: Text(filterCategoryName == nil && searchText.isEmpty ? "Tap the + button to add your first item." : "No matching items.")
                         )
                     } else {
                         ForEach(filteredAndSortedItems) { item in
@@ -83,7 +90,6 @@ struct ContentView: View {
                                     
                                     Spacer()
                                     
-                                    // This HStack is for the stepper, separate from the main content tappable area
                                     HStack {
                                         Stepper(value: Binding(
                                             get: { item.quantity },
@@ -101,7 +107,7 @@ struct ContentView: View {
                                 }
                                 .padding(.vertical, 8)
                             }
-                            .buttonStyle(.plain) // Make the button look like a normal list row
+                            .buttonStyle(.plain)
                         }
                         .onDelete(perform: deleteItems)
                     }
@@ -110,10 +116,10 @@ struct ContentView: View {
             .navigationTitle("Countory")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Picker("Filter by Category", selection: $filterCategory) {
-                        Text("All Categories").tag(nil as Category?)
+                    Picker("Filter by Category", selection: $filterCategoryName) { // Bind to name
+                        Text("All Categories").tag(nil as String?) // Tag is String?
                         ForEach(categories) { category in
-                            Text(category.name).tag(category as Category?)
+                            Text(category.name).tag(category.name as String?) // Tag is String?
                         }
                     }
                     .pickerStyle(.menu)
@@ -141,6 +147,7 @@ struct ContentView: View {
             .sheet(isPresented: $isShowingItemSheet) {
                 ItemEditView(item: itemToEdit)
             }
+            .searchable(text: $searchText)
         }
     }
 
@@ -154,6 +161,7 @@ struct ContentView: View {
     }
 }
 
+// ... (ItemEditView and PreviewProvider remain the same)
 struct ItemEditView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -232,12 +240,10 @@ struct ItemEditView: View {
     private func saveItem() {
         withAnimation {
             if let item {
-                // Edit existing item
                 item.name = name
                 item.quantity = quantity
                 item.category = selectedCategory
             } else {
-                // Create new item
                 let newItem = Item(name: name, quantity: quantity, category: selectedCategory)
                 modelContext.insert(newItem)
             }

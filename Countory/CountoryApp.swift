@@ -14,6 +14,6 @@ struct CountoryApp: App {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(for: Item.self)
+        .modelContainer(for: [Item.self, Category.self])
     }
 }

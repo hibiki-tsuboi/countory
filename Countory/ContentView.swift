@@ -188,6 +188,10 @@ struct ItemEditView: View {
         item == nil ? "新規アイテム" : "アイテムを編集"
     }
     
+    // Color palette to match ContentView
+    private let pantryBackgroundColor = Color(red: 0.93, green: 0.89, blue: 0.84)
+    private let pantryAccentColor = Color(red: 0.36, green: 0.2, blue: 0.12)
+    
     init(item: Item?) {
         self.item = item
         _name = State(initialValue: item?.name ?? "")
@@ -197,51 +201,71 @@ struct ItemEditView: View {
     
     var body: some View {
         NavigationView {
-            Form {
-                Section(header: Text("詳細")) {
-                    TextField("アイテム名", text: $name)
-                    Stepper("数量: \(quantity)", value: $quantity, in: 0...999)
-                }
+            ZStack {
+                pantryBackgroundColor.ignoresSafeArea()
                 
-                Section(header: Text("カテゴリ")) {
-                    Picker("カテゴリを選択", selection: $selectedCategory) {
-                        Text("なし").tag(nil as Category?)
-                        ForEach(categories) { category in
-                            Text(category.name).tag(category as Category?)
+                Form {
+                    Section(header: Text("詳細").foregroundColor(pantryAccentColor)) {
+                        TextField("アイテム名", text: $name)
+                        Stepper(value: $quantity, in: 0...999) { // Removed text, will use labelsHidden()
+                            Text("数量: \(quantity)") // Display quantity explicitly
+                        }
+                        .labelsHidden() // Hide default Stepper labels
+                    }
+                    .listRowBackground(pantryBackgroundColor.opacity(0.8))
+                    
+                    Section(header: Text("カテゴリ").foregroundColor(pantryAccentColor)) {
+                        Picker(selection: $selectedCategory) { // No explicit label here, using Image below
+                            Text("なし").tag(nil as Category?)
+                            ForEach(categories) { category in
+                                Text(category.name).tag(category as Category?)
+                            }
+                        } label: { // Custom label with icon
+                            Image(systemName: "tag.fill")
+                        }
+                        .pickerStyle(.menu)
+                        
+                        Button(action: {
+                            isShowingAddCategoryAlert = true
+                        }) {
+                            HStack {
+                                Image(systemName: "plus.circle.fill")
+                                Text("新規カテゴリ")
+                            }
                         }
                     }
-                    .pickerStyle(.menu)
-                    
-                    Button("新しいカテゴリを追加") {
-                        isShowingAddCategoryAlert = true
+                    .listRowBackground(pantryBackgroundColor.opacity(0.8))
+                }
+                .scrollContentBackground(.hidden)
+                .navigationTitle(navigationTitle)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(action: {
+                            dismiss()
+                        }) {
+                            Image(systemName: "xmark.circle.fill") // Icon for Cancel
+                        }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(action: {
+                            saveItem()
+                            dismiss()
+                        }) {
+                            Image(systemName: "checkmark")
+                        }
+                        .disabled(name.isEmpty)
                     }
                 }
-            }
-            .navigationTitle(navigationTitle)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("キャンセル") {
-                        dismiss()
+                .alert("新規カテゴリ", isPresented: $isShowingAddCategoryAlert) {
+                    TextField("カテゴリ名", text: $newCategoryName)
+                    Button("追加") {
+                        addCategory()
                     }
+                    Button("キャンセル", role: .cancel) { }
+                } message: {
+                    Text("新しいカテゴリの名前を入力してください。")
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(action: {
-                        saveItem()
-                        dismiss()
-                    }) {
-                        Image(systemName: "checkmark")
-                    }
-                    .disabled(name.isEmpty)
-                }
-            }
-            .alert("新規カテゴリ", isPresented: $isShowingAddCategoryAlert) {
-                TextField("カテゴリ名", text: $newCategoryName)
-                Button("追加") {
-                    addCategory()
-                }
-                Button("キャンセル", role: .cancel) { }
-            } message: {
-                Text("新しいカテゴリの名前を入力してください。")
+                .tint(pantryAccentColor)
             }
         }
     }

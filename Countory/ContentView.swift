@@ -18,9 +18,11 @@ struct ContentView: View {
     @Query(sort: \Item.createdAt, order: .reverse) private var items: [Item]
     @Query(sort: \Category.name) private var categories: [Category]
     
-    @State private var isShowingAddItemSheet = false
     @State private var currentSort: SortOption = .byDate
     @State private var filterCategory: Category? = nil
+    
+    @State private var isShowingItemSheet = false
+    @State private var itemToEdit: Item?
     
     private var filteredAndSortedItems: [Item] {
         // Filter first
@@ -28,14 +30,12 @@ struct ContentView: View {
         if let category = filterCategory {
             filteredItems = items.filter { $0.category == category }
         } else {
-            // No category filter, return all items
             filteredItems = items
         }
         
         // Then sort
         switch currentSort {
         case .byDate:
-            // The @Query is already sorting by date, so we can just return the filtered items.
             return filteredItems
         case .byQuantity:
             return filteredItems.sorted {
@@ -59,42 +59,49 @@ struct ContentView: View {
                         )
                     } else {
                         ForEach(filteredAndSortedItems) { item in
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text(item.name)
-                                        .font(.headline)
-                                    if let categoryName = item.category?.name {
-                                        Text(categoryName)
-                                            .font(.caption)
-                                            .foregroundColor(.white)
-                                            .padding(.horizontal, 8)
-                                            .padding(.vertical, 4)
-                                            .background(Color.blue)
-                                            .cornerRadius(8)
-                                    }
-                                    Text("Last updated: \(item.createdAt, format: .relative(presentation: .named))")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                }
-                                
-                                Spacer()
-                                
+                            Button(action: {
+                                itemToEdit = item
+                                isShowingItemSheet = true
+                            }) {
                                 HStack {
-                                    Stepper(value: Binding(
-                                        get: { item.quantity },
-                                        set: { newQuantity in
-                                            item.quantity = newQuantity
+                                    VStack(alignment: .leading) {
+                                        Text(item.name)
+                                            .font(.headline)
+                                        if let categoryName = item.category?.name {
+                                            Text(categoryName)
+                                                .font(.caption)
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .background(Color.accentColor)
+                                                .cornerRadius(8)
                                         }
-                                    ), in: 0...999) {
-                                        Text("\(item.quantity)")
-                                            .font(.title)
-                                            .fontWeight(.bold)
-                                            .padding(.horizontal)
-                                            .foregroundColor(item.quantity <= 2 ? .red : .primary)
+                                        Text("Last updated: \(item.createdAt, format: .relative(presentation: .named))")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    // This HStack is for the stepper, separate from the main content tappable area
+                                    HStack {
+                                        Stepper(value: Binding(
+                                            get: { item.quantity },
+                                            set: { newQuantity in
+                                                item.quantity = newQuantity
+                                            }
+                                        ), in: 0...999) {
+                                            Text("\(item.quantity)")
+                                                .font(.title)
+                                                .fontWeight(.bold)
+                                                .padding(.horizontal)
+                                                .foregroundColor(item.quantity <= 2 ? .red : .primary)
+                                        }
                                     }
                                 }
+                                .padding(.vertical, 8)
                             }
-                            .padding(.vertical, 8)
+                            .buttonStyle(.plain) // Make the button look like a normal list row
                         }
                         .onDelete(perform: deleteItems)
                     }
@@ -123,15 +130,16 @@ struct ContentView: View {
                         }
                         
                         Button(action: {
-                            isShowingAddItemSheet = true
+                            itemToEdit = nil
+                            isShowingItemSheet = true
                         }) {
                             Label("Add Item", systemImage: "plus")
                         }
                     }
                 }
             }
-            .sheet(isPresented: $isShowingAddItemSheet) {
-                AddItemSheet()
+            .sheet(isPresented: $isShowingItemSheet) {
+                ItemEditView(item: itemToEdit)
             }
         }
     }
@@ -146,11 +154,13 @@ struct ContentView: View {
     }
 }
 
-struct AddItemSheet: View {
+struct ItemEditView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     
     @Query(sort: \Category.name) private var categories: [Category]
+    
+    let item: Item?
     
     @State private var name: String = ""
     @State private var quantity: Int = 1
@@ -158,6 +168,17 @@ struct AddItemSheet: View {
 
     @State private var isShowingAddCategoryAlert = false
     @State private var newCategoryName = ""
+    
+    private var navigationTitle: String {
+        item == nil ? "New Item" : "Edit Item"
+    }
+    
+    init(item: Item?) {
+        self.item = item
+        _name = State(initialValue: item?.name ?? "")
+        _quantity = State(initialValue: item?.quantity ?? 1)
+        _selectedCategory = State(initialValue: item?.category)
+    }
     
     var body: some View {
         NavigationView {
@@ -174,12 +195,14 @@ struct AddItemSheet: View {
                             Text(category.name).tag(category as Category?)
                         }
                     }
+                    .pickerStyle(.menu)
+                    
                     Button("Add New Category") {
                         isShowingAddCategoryAlert = true
                     }
                 }
             }
-            .navigationTitle("New Item")
+            .navigationTitle(navigationTitle)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -188,7 +211,7 @@ struct AddItemSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        addItem()
+                        saveItem()
                         dismiss()
                     }
                     .disabled(name.isEmpty)
@@ -206,10 +229,18 @@ struct AddItemSheet: View {
         }
     }
     
-    private func addItem() {
+    private func saveItem() {
         withAnimation {
-            let newItem = Item(name: name, quantity: quantity, category: selectedCategory)
-            modelContext.insert(newItem)
+            if let item {
+                // Edit existing item
+                item.name = name
+                item.quantity = quantity
+                item.category = selectedCategory
+            } else {
+                // Create new item
+                let newItem = Item(name: name, quantity: quantity, category: selectedCategory)
+                modelContext.insert(newItem)
+            }
         }
     }
     
@@ -221,7 +252,6 @@ struct AddItemSheet: View {
         modelContext.insert(newCategory)
         
         selectedCategory = newCategory
-        
         newCategoryName = ""
     }
 }
@@ -235,7 +265,6 @@ struct ContentView_PreviewProvider: View {
             let config = ModelConfiguration(isStoredInMemoryOnly: true)
             container = try ModelContainer(for: Item.self, Category.self, configurations: config)
             
-            // サンプルデータの投入
             let category1 = Category(name: "Food")
             let category2 = Category(name: "Household")
             container.mainContext.insert(category1)

@@ -19,33 +19,27 @@ struct ContentView: View {
     @Query(sort: \Category.name) private var categories: [Category]
     
     @State private var currentSort: SortOption = .byDate
-    @State private var filterCategoryName: String? = nil // Changed from Category?
+    @State private var filterCategoryName: String? = nil
     
     @State private var isShowingItemSheet = false
     @State private var itemToEdit: Item?
     @State private var searchText = ""
     
     private var filteredAndSortedItems: [Item] {
-        // Apply search filter first
         var processedItems = items
         if !searchText.isEmpty {
             processedItems = processedItems.filter { $0.name.localizedStandardContains(searchText) }
         }
         
-        // Apply category filter using name
-        let filteredItems: [Item]
         if let categoryName = filterCategoryName {
-            filteredItems = processedItems.filter { $0.category?.name == categoryName }
-        } else {
-            filteredItems = processedItems
+            processedItems = processedItems.filter { $0.category?.name == categoryName }
         }
         
-        // Then sort
         switch currentSort {
         case .byDate:
-            return filteredItems
+            return processedItems
         case .byQuantity:
-            return filteredItems.sorted {
+            return processedItems.sorted {
                 if $0.quantity == $1.quantity {
                     return $0.createdAt > $1.createdAt
                 }
@@ -60,9 +54,9 @@ struct ContentView: View {
                 Group {
                     if filteredAndSortedItems.isEmpty {
                         ContentUnavailableView(
-                            "No Items",
+                            searchText.isEmpty ? "アイテムがありません" : "検索結果がありません",
                             systemImage: "shippingbox.fill",
-                            description: Text(filterCategoryName == nil && searchText.isEmpty ? "Tap the + button to add your first item." : "No matching items.")
+                            description: Text(searchText.isEmpty ? "右上の「+」ボタンから最初のアイテムを追加してください。" : "")
                         )
                     } else {
                         ForEach(filteredAndSortedItems) { item in
@@ -80,10 +74,10 @@ struct ContentView: View {
                                                 .foregroundColor(.white)
                                                 .padding(.horizontal, 8)
                                                 .padding(.vertical, 4)
-                                                .background(Color.accentColor)
+                                                .background(Color.accentColor.opacity(0.8))
                                                 .cornerRadius(8)
                                         }
-                                        Text("Last updated: \(item.createdAt, format: .relative(presentation: .named))")
+                                        Text("最終更新: \(item.createdAt, format: .relative(presentation: .named))")
                                             .font(.caption2)
                                             .foregroundColor(.secondary)
                                     }
@@ -113,13 +107,13 @@ struct ContentView: View {
                     }
                 }
             }
-            .navigationTitle("Countory")
+            .navigationTitle("在庫リスト")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Picker("Filter by Category", selection: $filterCategoryName) { // Bind to name
-                        Text("All Categories").tag(nil as String?) // Tag is String?
+                    Picker("カテゴリで絞り込み", selection: $filterCategoryName) {
+                        Text("すべてのカテゴリ").tag(nil as String?)
                         ForEach(categories) { category in
-                            Text(category.name).tag(category.name as String?) // Tag is String?
+                            Text(category.name).tag(category.name as String?)
                         }
                     }
                     .pickerStyle(.menu)
@@ -132,14 +126,14 @@ struct ContentView: View {
                                 currentSort = (currentSort == .byDate) ? .byQuantity : .byDate
                             }
                         }) {
-                            Label("Sort", systemImage: currentSort == .byDate ? "calendar" : "number")
+                            Image(systemName: currentSort == .byDate ? "calendar" : "arrow.up.arrow.down.circle")
                         }
                         
                         Button(action: {
                             itemToEdit = nil
                             isShowingItemSheet = true
                         }) {
-                            Label("Add Item", systemImage: "plus")
+                            Image(systemName: "plus")
                         }
                     }
                 }
@@ -147,7 +141,7 @@ struct ContentView: View {
             .sheet(isPresented: $isShowingItemSheet) {
                 ItemEditView(item: itemToEdit)
             }
-            .searchable(text: $searchText)
+            .searchable(text: $searchText, prompt: "アイテムを検索")
         }
     }
 
@@ -161,7 +155,6 @@ struct ContentView: View {
     }
 }
 
-// ... (ItemEditView and PreviewProvider remain the same)
 struct ItemEditView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -178,7 +171,7 @@ struct ItemEditView: View {
     @State private var newCategoryName = ""
     
     private var navigationTitle: String {
-        item == nil ? "New Item" : "Edit Item"
+        item == nil ? "新規アイテム" : "アイテムを編集"
     }
     
     init(item: Item?) {
@@ -191,21 +184,21 @@ struct ItemEditView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Item Details")) {
-                    TextField("Item Name", text: $name)
-                    Stepper("Quantity: \(quantity)", value: $quantity, in: 0...999)
+                Section(header: Text("詳細")) {
+                    TextField("アイテム名", text: $name)
+                    Stepper("数量: \(quantity)", value: $quantity, in: 0...999)
                 }
                 
-                Section(header: Text("Category")) {
-                    Picker("Select Category", selection: $selectedCategory) {
-                        Text("None").tag(nil as Category?)
+                Section(header: Text("カテゴリ")) {
+                    Picker("カテゴリを選択", selection: $selectedCategory) {
+                        Text("なし").tag(nil as Category?)
                         ForEach(categories) { category in
                             Text(category.name).tag(category as Category?)
                         }
                     }
                     .pickerStyle(.menu)
                     
-                    Button("Add New Category") {
+                    Button("新しいカテゴリを追加") {
                         isShowingAddCategoryAlert = true
                     }
                 }
@@ -213,26 +206,28 @@ struct ItemEditView: View {
             .navigationTitle(navigationTitle)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button("キャンセル") {
                         dismiss()
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button(action: {
                         saveItem()
                         dismiss()
+                    }) {
+                        Image(systemName: "checkmark")
                     }
                     .disabled(name.isEmpty)
                 }
             }
-            .alert("New Category", isPresented: $isShowingAddCategoryAlert) {
-                TextField("Category Name", text: $newCategoryName)
-                Button("Add") {
+            .alert("新規カテゴリ", isPresented: $isShowingAddCategoryAlert) {
+                TextField("カテゴリ名", text: $newCategoryName)
+                Button("追加") {
                     addCategory()
                 }
-                Button("Cancel", role: .cancel) { }
+                Button("キャンセル", role: .cancel) { }
             } message: {
-                Text("Enter a name for the new category.")
+                Text("新しいカテゴリの名前を入力してください。")
             }
         }
     }
@@ -271,15 +266,15 @@ struct ContentView_PreviewProvider: View {
             let config = ModelConfiguration(isStoredInMemoryOnly: true)
             container = try ModelContainer(for: Item.self, Category.self, configurations: config)
             
-            let category1 = Category(name: "Food")
-            let category2 = Category(name: "Household")
+            let category1 = Category(name: "食品")
+            let category2 = Category(name: "日用品")
             container.mainContext.insert(category1)
             container.mainContext.insert(category2)
             
             let sampleItems = [
-                Item(name: "Milk", quantity: 0, category: category1),
-                Item(name: "Toilet Paper", quantity: 3, category: category2),
-                Item(name: "Shampoo", quantity: 1, category: category2)
+                Item(name: "牛乳", quantity: 0, category: category1),
+                Item(name: "トイレットペーパー", quantity: 3, category: category2),
+                Item(name: "シャンプー", quantity: 1, category: category2)
             ]
             sampleItems.forEach { container.mainContext.insert($0) }
         } catch {

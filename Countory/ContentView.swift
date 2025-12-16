@@ -205,12 +205,15 @@ struct ItemEditView: View {
                 pantryBackgroundColor.ignoresSafeArea()
                 
                 Form {
-                    Section(header: Text("詳細").foregroundColor(pantryAccentColor)) {
+                    Section {
                         TextField("アイテム名", text: $name)
-                        Stepper(value: $quantity, in: 0...999) { // Removed text, will use labelsHidden()
-                            Text("数量: \(quantity)") // Display quantity explicitly
+                        HStack {
+                            Text("数量")
+                            Spacer()
+                            Text("\(quantity)")
+                            Stepper("数量", value: $quantity, in: 0...999)
+                                .labelsHidden()
                         }
-                        .labelsHidden() // Hide default Stepper labels
                     }
                     .listRowBackground(pantryBackgroundColor.opacity(0.8))
                     
@@ -237,7 +240,7 @@ struct ItemEditView: View {
                     .listRowBackground(pantryBackgroundColor.opacity(0.8))
                 }
                 .scrollContentBackground(.hidden)
-                .navigationTitle(navigationTitle)
+                .navigationTitle("")
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button(action: {

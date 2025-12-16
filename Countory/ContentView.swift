@@ -91,9 +91,7 @@ struct ContentView: View {
                                                 .cornerRadius(8)
                                         }
                                         
-                                        Text("最終更新: \(item.createdAt, format: .relative(presentation: .named))")
-                                            .font(.caption2)
-                                            .foregroundColor(pantryAccentColor.opacity(0.7))
+                                        // Removed "最終更新" Text view
                                     }
                                     
                                     Spacer()

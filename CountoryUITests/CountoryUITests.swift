@@ -1,10 +1,3 @@
-//
-//  CountoryUITests.swift
-//  CountoryUITests
-//
-//  Created by Hibiki Tsuboi on 2025/12/15.
-//
-
 import XCTest
 
 final class CountoryUITests: XCTestCase {
@@ -15,27 +8,37 @@ final class CountoryUITests: XCTestCase {
         // In UI tests it is usually best to stop immediately when a failure occurs.
         continueAfterFailure = false
 
-        // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
+        // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests to run. The desired UIs are sometimes broken into smaller functional areas.
+        // Use the strategy to pass the test from other files, setting the initial state of the UI when your test methods are called.
     }
 
     override func tearDownWithError() throws {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
 
-    @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    func testAppLaunchesAndDisplaysMainScreen() throws {
         let app = XCUIApplication()
         app.launch()
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+        // Assert that the navigation title "Countory" exists
+        XCTAssertTrue(app.navigationBars["Countory"].exists)
+
+        // Assert that the "Add Item" button exists
+        XCTAssertTrue(app.buttons["Add Item"].exists)
     }
 
-    @MainActor
-    func testLaunchPerformance() throws {
-        // This measures how long it takes to launch your application.
-        measure(metrics: [XCTApplicationLaunchMetric()]) {
-            XCUIApplication().launch()
-        }
-    }
+    // You can add more UI tests here, for example:
+    // func testAddItem() throws {
+    //     let app = XCUIApplication()
+    //     app.launch()
+    //
+    //     app.buttons["Add Item"].tap()
+    //     app.textFields["Item Name"].tap()
+    //     app.textFields["Item Name"].typeText("New Test Item")
+    //     app.steppers["Quantity: 1"].buttons["Increment"].tap() // Tap increment
+    //     app.buttons["Save"].tap()
+    //
+    //     // Assert that the new item appears in the list
+    //     XCTAssertTrue(app.staticTexts["New Test Item"].exists)
+    // }
 }

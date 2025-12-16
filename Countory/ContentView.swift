@@ -10,9 +10,15 @@ import SwiftData
 
 struct ContentView: View {
     
+    // MARK: - Properties
     enum SortOption {
         case byDate, byQuantity
     }
+    
+    // Pantry-style color palette
+    private let pantryBackgroundColor = Color(red: 0.96, green: 0.94, blue: 0.90) // Beige
+    private let pantryRowColor = Color(red: 0.98, green: 0.97, blue: 0.95) // Off-white
+    private let pantryAccentColor = Color(red: 0.45, green: 0.33, blue: 0.22) // Brown
     
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Item.createdAt, order: .reverse) private var items: [Item]
@@ -48,66 +54,73 @@ struct ContentView: View {
         }
     }
     
+    // MARK: - Body
     var body: some View {
         NavigationView {
-            List {
-                Group {
+            ZStack {
+                pantryBackgroundColor.ignoresSafeArea()
+                
+                List {
                     if filteredAndSortedItems.isEmpty {
                         ContentUnavailableView(
                             searchText.isEmpty ? "アイテムがありません" : "検索結果がありません",
                             systemImage: "shippingbox.fill",
                             description: Text(searchText.isEmpty ? "右上の「+」ボタンから最初のアイテムを追加してください。" : "")
                         )
+                        .listRowBackground(Color.clear)
                     } else {
                         ForEach(filteredAndSortedItems) { item in
                             Button(action: {
                                 itemToEdit = item
                                 isShowingItemSheet = true
                             }) {
-                                HStack {
-                                    VStack(alignment: .leading) {
+                                HStack(alignment: .center, spacing: 16) {
+                                    VStack(alignment: .leading, spacing: 8) {
                                         Text(item.name)
                                             .font(.headline)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(pantryAccentColor)
+                                        
                                         if let categoryName = item.category?.name {
                                             Text(categoryName)
-                                                .font(.caption)
+                                                .font(.caption.bold())
                                                 .foregroundColor(.white)
                                                 .padding(.horizontal, 8)
                                                 .padding(.vertical, 4)
-                                                .background(Color.accentColor.opacity(0.8))
+                                                .background(pantryAccentColor.opacity(0.8))
                                                 .cornerRadius(8)
                                         }
+                                        
                                         Text("最終更新: \(item.createdAt, format: .relative(presentation: .named))")
                                             .font(.caption2)
-                                            .foregroundColor(.secondary)
+                                            .foregroundColor(pantryAccentColor.opacity(0.7))
                                     }
                                     
                                     Spacer()
                                     
-                                    HStack {
-                                        Stepper(value: Binding(
-                                            get: { item.quantity },
-                                            set: { newQuantity in
-                                                item.quantity = newQuantity
-                                            }
-                                        ), in: 0...999) {
-                                            Text("\(item.quantity)")
-                                                .font(.title)
-                                                .fontWeight(.bold)
-                                                .padding(.horizontal)
-                                                .foregroundColor(item.quantity <= 2 ? .red : .primary)
-                                        }
-                                    }
+                                    Text("\(item.quantity)")
+                                        .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                                        .foregroundColor(item.quantity <= 2 ? .red.opacity(0.8) : pantryAccentColor)
+                                        .padding(.horizontal)
                                 }
-                                .padding(.vertical, 8)
+                                .padding()
+                                .background(pantryRowColor)
+                                .cornerRadius(12)
+                                .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
                             }
                             .buttonStyle(.plain)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                         }
                         .onDelete(perform: deleteItems)
                     }
                 }
+                .listRowBackground(Color.clear)
             }
-            .navigationTitle("在庫リスト")
+            .listStyle(.plain)
+            .background(pantryBackgroundColor)
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Picker("カテゴリで絞り込み", selection: $filterCategoryName) {
@@ -142,6 +155,7 @@ struct ContentView: View {
                 ItemEditView(item: itemToEdit)
             }
             .searchable(text: $searchText, prompt: "アイテムを検索")
+            .tint(pantryAccentColor)
         }
     }
 

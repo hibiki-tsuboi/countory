@@ -16,9 +16,9 @@ struct ContentView: View {
     }
     
     // Pantry-style color palette
-    private let pantryBackgroundColor = Color(red: 0.96, green: 0.94, blue: 0.90) // Beige
-    private let pantryRowColor = Color(red: 0.98, green: 0.97, blue: 0.95) // Off-white
-    private let pantryAccentColor = Color(red: 0.45, green: 0.33, blue: 0.22) // Brown
+    private let pantryBackgroundColor = Color(red: 0.93, green: 0.89, blue: 0.84) // Darker Beige
+    private let pantryRowColor = Color(red: 0.98, green: 0.96, blue: 0.92) // Light creamy beige
+    private let pantryAccentColor = Color(red: 0.36, green: 0.2, blue: 0.12)    // Dark Brown
     
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Item.createdAt, order: .reverse) private var items: [Item]

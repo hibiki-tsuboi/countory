@@ -13,6 +13,7 @@ struct CountoryApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .preferredColorScheme(.light)
         }
         .modelContainer(for: [Item.self, Category.self])
     }

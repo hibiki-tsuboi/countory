@@ -152,19 +152,12 @@ struct ContentView: View {
                         }                }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        Button(action: {
-                            withAnimation {
-                                currentSort = (currentSort == .byDate) ? .byQuantity : .byDate
-                            }
-                        }) {
-                            Label(
-                                currentSort == .byDate ? "数量で並び替え" : "日付で並び替え",
-                                systemImage: currentSort == .byDate ? "arrow.up.arrow.down.circle" : "calendar"
-                            )
+                    Button(action: {
+                        withAnimation {
+                            currentSort = (currentSort == .byDate) ? .byQuantity : .byDate
                         }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
+                    }) {
+                        Image(systemName: "arrow.up.arrow.down")
                     }
                 }
             }

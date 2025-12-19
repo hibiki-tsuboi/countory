@@ -121,13 +121,21 @@ struct ContentView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Picker("カテゴリで絞り込み", selection: $filterCategoryName) {
-                        Text("すべてのカテゴリ").tag(nil as String?)
-                        ForEach(categories) { category in
-                            Text(category.name).tag(category.name as String?)
+                    Menu {
+                        Picker(selection: $filterCategoryName, label: EmptyView()) {
+                            Text("すべてのカテゴリ").tag(nil as String?)
+                            ForEach(categories) { category in
+                                Text(category.name).tag(category.name as String?)
+                            }
                         }
+                    } label: {
+                        HStack {
+                            Text(filterCategoryName ?? "すべてのカテゴリ")
+                            Image(systemName: "chevron.down")
+                                .font(.caption)
+                        }
+                        .foregroundColor(pantryAccentColor)
                     }
-                    .pickerStyle(.menu)
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -177,7 +185,7 @@ struct ItemEditView: View {
     
     @State private var name: String = ""
     @State private var quantity: Int = 1
-    @State private var selectedCategory: Category?
+    @State private var selectedCategoryName: String?
 
     @State private var isShowingAddCategoryAlert = false
     @State private var newCategoryName = ""
@@ -194,7 +202,7 @@ struct ItemEditView: View {
         self.item = item
         _name = State(initialValue: item?.name ?? "")
         _quantity = State(initialValue: item?.quantity ?? 1)
-        _selectedCategory = State(initialValue: item?.category)
+        _selectedCategoryName = State(initialValue: item?.category?.name)
     }
     
     var body: some View {
@@ -216,10 +224,10 @@ struct ItemEditView: View {
                     .listRowBackground(pantryBackgroundColor.opacity(0.8))
                     
                     Section(header: Text("カテゴリ").foregroundColor(pantryAccentColor)) {
-                        Picker(selection: $selectedCategory) { // No explicit label here, using Image below
-                            Text("なし").tag(nil as Category?)
+                        Picker(selection: $selectedCategoryName) { // No explicit label here, using Image below
+                            Text("なし").tag(nil as String?)
                             ForEach(categories) { category in
-                                Text(category.name).tag(category as Category?)
+                                Text(category.name).tag(category.name as String?)
                             }
                         } label: { // Custom label with icon
                             Image(systemName: "tag.fill")
@@ -273,6 +281,8 @@ struct ItemEditView: View {
     
     private func saveItem() {
         withAnimation {
+            let selectedCategory = categories.first { $0.name == selectedCategoryName }
+            
             if let item {
                 item.name = name
                 item.quantity = quantity
@@ -290,9 +300,11 @@ struct ItemEditView: View {
         
         let newCategory = Category(name: trimmedName)
         modelContext.insert(newCategory)
-        
-        selectedCategory = newCategory
         newCategoryName = ""
+        
+        DispatchQueue.main.async {
+            selectedCategoryName = newCategory.name
+        }
     }
 }
 

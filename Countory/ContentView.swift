@@ -10,6 +10,20 @@ import SwiftData
 
 struct ContentView: View {
     
+    enum EditSheetItem: Identifiable {
+        case new
+        case edit(Item)
+        
+        var id: String {
+            switch self {
+            case .new:
+                return "new"
+            case .edit(let item):
+                return item.id.storeIdentifier ?? UUID().uuidString
+            }
+        }
+    }
+    
     // MARK: - Properties
     enum SortOption {
         case byDate, byQuantity
@@ -27,8 +41,7 @@ struct ContentView: View {
     @State private var currentSort: SortOption = .byDate
     @State private var filterCategoryName: String? = nil
     
-    @State private var isShowingItemSheet = false
-    @State private var itemToEdit: Item?
+    @State private var sheetItem: EditSheetItem?
     @State private var searchText = ""
     
     @State private var displayedItems: [Item] = []
@@ -50,8 +63,7 @@ struct ContentView: View {
                     } else {
                         ForEach(displayedItems) { item in
                             Button(action: {
-                                itemToEdit = item
-                                isShowingItemSheet = true
+                                sheetItem = .edit(item)
                             }) {
                                 HStack(alignment: .center, spacing: 16) {
                                     VStack(alignment: .leading, spacing: 8) {
@@ -99,8 +111,7 @@ struct ContentView: View {
                     HStack {
                         Spacer()
                         Button(action: {
-                            itemToEdit = nil
-                            isShowingItemSheet = true
+                            sheetItem = .new
                         }) {
                             Image(systemName: "plus")
                                 .font(.title.weight(.semibold))
@@ -157,8 +168,13 @@ struct ContentView: View {
                     }
                 }
             }
-            .sheet(isPresented: $isShowingItemSheet) {
-                ItemEditView(item: itemToEdit)
+            .sheet(item: $sheetItem) { sheetItem in
+                switch sheetItem {
+                case .new:
+                    ItemEditView(item: nil)
+                case .edit(let item):
+                    ItemEditView(item: item)
+                }
             }
             .searchable(text: $searchText, prompt: "アイテムを検索")
             .onAppear {
@@ -256,8 +272,8 @@ struct ItemEditView: View {
     
     let item: Item?
     
-    @State private var name: String = ""
-    @State private var quantity: Int = 1
+    @State private var name: String
+    @State private var quantity: Int
     @State private var selectedCategoryName: String?
 
     @State private var isShowingAddCategoryAlert = false

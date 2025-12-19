@@ -31,28 +31,7 @@ struct ContentView: View {
     @State private var itemToEdit: Item?
     @State private var searchText = ""
     
-    private var filteredAndSortedItems: [Item] {
-        var processedItems = items
-        if !searchText.isEmpty {
-            processedItems = processedItems.filter { $0.name.localizedStandardContains(searchText) }
-        }
-        
-        if let categoryName = filterCategoryName {
-            processedItems = processedItems.filter { $0.category?.name == categoryName }
-        }
-        
-        switch currentSort {
-        case .byDate:
-            return processedItems
-        case .byQuantity:
-            return processedItems.sorted {
-                if $0.quantity == $1.quantity {
-                    return $0.createdAt > $1.createdAt
-                }
-                return $0.quantity < $1.quantity
-            }
-        }
-    }
+    @State private var displayedItems: [Item] = []
     
     // MARK: - Body
     var body: some View {
@@ -61,7 +40,7 @@ struct ContentView: View {
                 pantryBackgroundColor.ignoresSafeArea()
                 
                 List {
-                    if filteredAndSortedItems.isEmpty {
+                    if displayedItems.isEmpty {
                         ContentUnavailableView(
                             searchText.isEmpty ? "アイテムがありません" : "検索結果がありません",
                             systemImage: "shippingbox.fill",
@@ -69,7 +48,7 @@ struct ContentView: View {
                         )
                         .listRowBackground(Color.clear)
                     } else {
-                        ForEach(filteredAndSortedItems) { item in
+                        ForEach(displayedItems) { item in
                             Button(action: {
                                 itemToEdit = item
                                 isShowingItemSheet = true
@@ -182,17 +161,90 @@ struct ContentView: View {
                 ItemEditView(item: itemToEdit)
             }
             .searchable(text: $searchText, prompt: "アイテムを検索")
+            .onAppear {
+                applySortingAndFiltering()
+            }
+            .onChange(of: items) { oldItems, newItems in
+                // アイテムの数が変わった（追加・削除）場合は、リスト全体を再計算
+                if oldItems.count != newItems.count {
+                    applySortingAndFiltering()
+                    return
+                }
+
+                // アイテムの数が同じ（プロパティ編集）の場合
+                if currentSort == .byQuantity {
+                    // 順序を維持しつつ、データだけ更新する
+                    let newItemsDict = Dictionary(uniqueKeysWithValues: newItems.map { ($0.id, $0) })
+                    var updatedList: [Item] = []
+                    for item in displayedItems {
+                        if let updatedItem = newItemsDict[item.id] {
+                            // フィルタリング条件もここでチェック
+                            var passesFilter = true
+                            if !searchText.isEmpty && !updatedItem.name.localizedStandardContains(searchText) {
+                                passesFilter = false
+                            }
+                            if let categoryName = filterCategoryName, updatedItem.category?.name != categoryName {
+                                passesFilter = false
+                            }
+                            
+                            if passesFilter {
+                                updatedList.append(updatedItem)
+                            }
+                        }
+                    }
+                    displayedItems = updatedList
+                } else {
+                    // .byDate の場合は、リスト全体を再計算（更新されたものが上に来る）
+                    applySortingAndFiltering()
+                }
+            }
+            .onChange(of: currentSort) {
+                applySortingAndFiltering()
+            }
+            .onChange(of: searchText) {
+                applySortingAndFiltering()
+            }
+            .onChange(of: filterCategoryName) {
+                applySortingAndFiltering()
+            }
             .tint(pantryAccentColor)
         }
     }
 
     private func deleteItems(offsets: IndexSet) {
         withAnimation {
-            let itemsToDelete = offsets.map { filteredAndSortedItems[$0] }
+            let itemsToDelete = offsets.map { displayedItems[$0] }
             for item in itemsToDelete {
                 modelContext.delete(item)
             }
         }
+    }
+    
+    private func applySortingAndFiltering() {
+        var tempItems = items
+        
+        // Filtering
+        if !searchText.isEmpty {
+            tempItems = tempItems.filter { $0.name.localizedStandardContains(searchText) }
+        }
+        if let categoryName = filterCategoryName {
+            tempItems = tempItems.filter { $0.category?.name == categoryName }
+        }
+        
+        // Sorting
+        switch currentSort {
+        case .byDate:
+            tempItems.sort { $0.createdAt > $1.createdAt }
+        case .byQuantity:
+            tempItems.sort {
+                if $0.quantity == $1.quantity {
+                    return $0.createdAt > $1.createdAt
+                }
+                return $0.quantity < $1.quantity
+            }
+        }
+        
+        displayedItems = tempItems
     }
 }
 

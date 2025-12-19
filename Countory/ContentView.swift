@@ -304,30 +304,31 @@ struct ItemEditView: View {
                 pantryBackgroundColor.ignoresSafeArea()
                 
                 Form {
-                    Section {
-                        TextField("アイテム名", text: $name)
-                        HStack {
-                            Spacer()
-                            Text("\(quantity)")
-                            Stepper("数量", value: $quantity, in: 0...999)
-                                .labelsHidden()
-                        }
-                        
-                        ZStack(alignment: .topLeading) {
-                            if notes.isEmpty {
-                                Text("備考")
-                                    .foregroundColor(Color(uiColor: .placeholderText))
-                                    .padding(.horizontal, 4)
-                                    .padding(.vertical, 8)
-                            }
-                            TextEditor(text: $notes)
-                                .frame(minHeight: 100)
-                                .scrollContentBackground(.hidden)
-                        }
-                        .background(pantryRowColor)
-                        .cornerRadius(12)
-                    }
-                    .listRowBackground(pantryBackgroundColor.opacity(0.8))
+                                        Section {
+                                            TextField("アイテム名", text: $name)
+                                            VStack { // VStackで囲む
+                                                HStack {
+                                                    Spacer()
+                                                    Text("\(quantity)")
+                                                    Stepper("数量", value: $quantity, in: 0...999)
+                                                        .labelsHidden()
+                                                }
+                                                
+                                                ZStack(alignment: .topLeading) {
+                                                    if notes.isEmpty {
+                                                        Text("備考")
+                                                            .foregroundColor(Color(uiColor: .placeholderText))
+                                                            .padding(.horizontal, 4)
+                                                            .padding(.vertical, 8)
+                                                    }
+                                                    TextEditor(text: $notes)
+                                                        .frame(minHeight: 100)
+                                                        .scrollContentBackground(.hidden)
+                                                }
+                                                .background(pantryRowColor)
+                                                .cornerRadius(12)
+                                            } // VStack終わり
+                                        }                    .listRowBackground(pantryBackgroundColor.opacity(0.8))
                     
                     Section(header: Text("カテゴリ").foregroundColor(pantryAccentColor)) {
                         Picker(selection: $selectedCategoryName) { // No explicit label here, using Image below

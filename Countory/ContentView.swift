@@ -114,6 +114,26 @@ struct ContentView: View {
                     }
                 }
                 .listRowBackground(Color.clear)
+
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            itemToEdit = nil
+                            isShowingItemSheet = true
+                        }) {
+                            Image(systemName: "plus")
+                                .font(.title.weight(.semibold))
+                                .padding()
+                                .background(pantryAccentColor)
+                                .foregroundColor(.white)
+                                .clipShape(Circle())
+                                .shadow(radius: 4, x: 0, y: 4)
+                        }
+                        .padding()
+                    }
+                }
             }
             .listStyle(.plain)
             .background(pantryBackgroundColor)
@@ -139,21 +159,19 @@ struct ContentView: View {
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack {
+                    Menu {
                         Button(action: {
                             withAnimation {
                                 currentSort = (currentSort == .byDate) ? .byQuantity : .byDate
                             }
                         }) {
-                            Image(systemName: currentSort == .byDate ? "calendar" : "arrow.up.arrow.down.circle")
+                            Label(
+                                currentSort == .byDate ? "数量で並び替え" : "日付で並び替え",
+                                systemImage: currentSort == .byDate ? "arrow.up.arrow.down.circle" : "calendar"
+                            )
                         }
-                        
-                        Button(action: {
-                            itemToEdit = nil
-                            isShowingItemSheet = true
-                        }) {
-                            Image(systemName: "plus")
-                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
                     }
                 }
             }

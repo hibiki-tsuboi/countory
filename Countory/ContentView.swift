@@ -26,7 +26,7 @@ struct ContentView: View {
     
     // MARK: - Properties
     enum SortOption {
-        case byDate, byQuantity
+        case byDate, byQuantityAscending, byQuantityDescending
     }
     
     // Pantry-style color palette
@@ -162,7 +162,14 @@ struct ContentView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         withAnimation {
-                            currentSort = (currentSort == .byDate) ? .byQuantity : .byDate
+                            switch currentSort {
+                            case .byDate:
+                                currentSort = .byQuantityAscending
+                            case .byQuantityAscending:
+                                currentSort = .byQuantityDescending
+                            case .byQuantityDescending:
+                                currentSort = .byQuantityAscending
+                            }
                         }
                     }) {
                         Image(systemName: "arrow.up.arrow.down")
@@ -189,7 +196,7 @@ struct ContentView: View {
                 }
 
                 // アイテムの数が同じ（プロパティ編集）の場合
-                if currentSort == .byQuantity {
+                if currentSort != .byDate {
                     // 順序を維持しつつ、データだけ更新する
                     let newItemsDict = Dictionary(uniqueKeysWithValues: newItems.map { ($0.id, $0) })
                     var updatedList: [Item] = []
@@ -252,12 +259,19 @@ struct ContentView: View {
         switch currentSort {
         case .byDate:
             tempItems.sort { $0.createdAt > $1.createdAt }
-        case .byQuantity:
+        case .byQuantityAscending:
             tempItems.sort {
                 if $0.quantity == $1.quantity {
                     return $0.createdAt > $1.createdAt
                 }
                 return $0.quantity < $1.quantity
+            }
+        case .byQuantityDescending:
+            tempItems.sort {
+                if $0.quantity == $1.quantity {
+                    return $0.createdAt > $1.createdAt
+                }
+                return $0.quantity > $1.quantity
             }
         }
         
@@ -305,7 +319,7 @@ struct ItemEditView: View {
                 
                 Form {
                                         Section {
-                                            TextField("アイテム名", text: $name)
+                                            TextField("商品", text: $name)
                                             VStack { // VStackで囲む
                                                 HStack {
                                                     Spacer()

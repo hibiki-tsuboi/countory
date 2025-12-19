@@ -233,6 +233,7 @@ struct ContentView: View {
             }
             .tint(pantryAccentColor)
         }
+        .navigationViewStyle(.stack)
     }
 
     private func deleteItems(offsets: IndexSet) {
@@ -398,6 +399,7 @@ struct ItemEditView: View {
                 .tint(pantryAccentColor)
             }
         }
+        .navigationViewStyle(.stack)
     }
     
     private func saveItem() {

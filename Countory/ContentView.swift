@@ -148,15 +148,18 @@ struct ContentView: View {
                                 Text(category.name).tag(category.name as String?)
                             }
                         }
-                    } label: {
-                        HStack {
-                            Text(filterCategoryName ?? "すべてのカテゴリ")
-                            Image(systemName: "chevron.down")
-                                .font(.caption)
-                        }
-                        .foregroundColor(pantryAccentColor)
-                    }
-                }
+                        } label: {
+                            HStack {
+                                if let categoryName = filterCategoryName {
+                                    Text(categoryName)
+                                } else {
+                                    Image(systemName: "tag.fill")
+                                }
+                                Image(systemName: "chevron.down")
+                                    .font(.caption)
+                            }
+                            .foregroundColor(pantryAccentColor)
+                        }                }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {

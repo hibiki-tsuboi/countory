@@ -72,6 +72,14 @@ struct ContentView: View {
                                             .fontWeight(.bold)
                                             .foregroundColor(pantryAccentColor)
                                         
+                                        if let notes = item.notes, !notes.isEmpty {
+                                            Text(notes)
+                                                .font(.subheadline)
+                                                .foregroundColor(pantryAccentColor.opacity(0.8))
+                                                .lineLimit(2)
+                                                .padding(.top, 2)
+                                        }
+                                        
                                         if let categoryName = item.category?.name {
                                             Text(categoryName)
                                                 .font(.caption.bold())
@@ -267,6 +275,7 @@ struct ItemEditView: View {
     
     @State private var name: String
     @State private var quantity: Int
+    @State private var notes: String
     @State private var selectedCategoryName: String?
 
     @State private var isShowingAddCategoryAlert = false
@@ -278,12 +287,14 @@ struct ItemEditView: View {
     
     // Color palette to match ContentView
     private let pantryBackgroundColor = Color(red: 0.93, green: 0.89, blue: 0.84)
+    private let pantryRowColor = Color(red: 0.98, green: 0.96, blue: 0.92) // Light creamy beige
     private let pantryAccentColor = Color(red: 0.36, green: 0.2, blue: 0.12)
     
     init(item: Item?) {
         self.item = item
         _name = State(initialValue: item?.name ?? "")
         _quantity = State(initialValue: item?.quantity ?? 1)
+        _notes = State(initialValue: item?.notes ?? "")
         _selectedCategoryName = State(initialValue: item?.category?.name)
     }
     
@@ -296,12 +307,25 @@ struct ItemEditView: View {
                     Section {
                         TextField("アイテム名", text: $name)
                         HStack {
-                            Text("数量")
                             Spacer()
                             Text("\(quantity)")
                             Stepper("数量", value: $quantity, in: 0...999)
                                 .labelsHidden()
                         }
+                        
+                        ZStack(alignment: .topLeading) {
+                            if notes.isEmpty {
+                                Text("備考")
+                                    .foregroundColor(Color(uiColor: .placeholderText))
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 8)
+                            }
+                            TextEditor(text: $notes)
+                                .frame(minHeight: 100)
+                                .scrollContentBackground(.hidden)
+                        }
+                        .background(pantryRowColor)
+                        .cornerRadius(12)
                     }
                     .listRowBackground(pantryBackgroundColor.opacity(0.8))
                     
@@ -364,13 +388,15 @@ struct ItemEditView: View {
     private func saveItem() {
         withAnimation {
             let selectedCategory = categories.first { $0.name == selectedCategoryName }
+            let notesToSave = notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes
             
             if let item {
                 item.name = name
                 item.quantity = quantity
+                item.notes = notesToSave
                 item.category = selectedCategory
             } else {
-                let newItem = Item(name: name, quantity: quantity, category: selectedCategory)
+                let newItem = Item(name: name, quantity: quantity, notes: notesToSave, category: selectedCategory)
                 modelContext.insert(newItem)
             }
         }

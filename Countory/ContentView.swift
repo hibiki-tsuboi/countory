@@ -137,6 +137,9 @@ struct ContentView: View {
             .background(pantryBackgroundColor)
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.visible, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(pantryBackgroundColor, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Menu {
@@ -369,6 +372,9 @@ struct ItemEditView: View {
                 }
                 .scrollContentBackground(.hidden)
                 .navigationTitle("")
+                .toolbar(.visible, for: .navigationBar)
+                .toolbarBackground(.visible, for: .navigationBar)
+                .toolbarBackground(pantryBackgroundColor, for: .navigationBar)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button(action: {

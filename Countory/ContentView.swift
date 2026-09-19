@@ -19,7 +19,7 @@ struct ContentView: View {
             case .new:
                 return "new"
             case .edit(let item):
-                return item.id.storeIdentifier ?? UUID().uuidString
+                return "edit-\(item.id.uuidString)"
             }
         }
     }
@@ -42,7 +42,10 @@ struct ContentView: View {
     @State private var filterCategoryName: String? = nil
     
     @State private var sheetItem: EditSheetItem?
+    @State private var isShowingBackup = false
     @State private var searchText = ""
+    @State private var isShowingDeleteError = false
+    @State private var deleteErrorMessage = ""
     
     @State private var displayedItems: [Item] = []
     
@@ -129,6 +132,8 @@ struct ContentView: View {
                                 .clipShape(Circle())
                                 .shadow(radius: 4, x: 0, y: 4)
                         }
+                        .accessibilityLabel("アイテムを追加")
+                        .accessibilityIdentifier("addItem")
                         .padding()
                     }
                 }
@@ -141,6 +146,14 @@ struct ContentView: View {
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarBackground(pantryBackgroundColor, for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        isShowingBackup = true
+                    } label: {
+                        Label("データ移行", systemImage: "externaldrive")
+                    }
+                    .accessibilityIdentifier("dataTransfer")
+                }
                 ToolbarItem(placement: .navigationBarLeading) {
                     Menu {
                         Picker(selection: $filterCategoryName, label: EmptyView()) {
@@ -186,6 +199,14 @@ struct ContentView: View {
                 case .edit(let item):
                     ItemEditView(item: item)
                 }
+            }
+            .sheet(isPresented: $isShowingBackup, onDismiss: applySortingAndFiltering) {
+                BackupView()
+            }
+            .alert("削除できませんでした", isPresented: $isShowingDeleteError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(deleteErrorMessage)
             }
             .searchable(text: $searchText, prompt: "アイテムを検索")
             .onAppear {
@@ -245,6 +266,13 @@ struct ContentView: View {
             for item in itemsToDelete {
                 modelContext.delete(item)
             }
+            do {
+                try modelContext.save()
+            } catch {
+                modelContext.rollback()
+                deleteErrorMessage = error.localizedDescription
+                isShowingDeleteError = true
+            }
         }
     }
     
@@ -298,6 +326,8 @@ struct ItemEditView: View {
 
     @State private var isShowingAddCategoryAlert = false
     @State private var newCategoryName = ""
+    @State private var isShowingSaveError = false
+    @State private var saveErrorMessage = ""
     
     private var navigationTitle: String {
         item == nil ? "新規アイテム" : "アイテムを編集"
@@ -386,11 +416,12 @@ struct ItemEditView: View {
                     ToolbarItem(placement: .confirmationAction) {
                         Button(action: {
                             saveItem()
-                            dismiss()
                         }) {
                             Image(systemName: "checkmark")
                         }
                         .disabled(name.isEmpty)
+                        .accessibilityLabel("保存")
+                        .accessibilityIdentifier("saveItem")
                     }
                 }
                 .alert("新規カテゴリ", isPresented: $isShowingAddCategoryAlert) {
@@ -401,6 +432,11 @@ struct ItemEditView: View {
                     Button("キャンセル", role: .cancel) { }
                 } message: {
                     Text("新しいカテゴリの名前を入力してください。")
+                }
+                .alert("保存できませんでした", isPresented: $isShowingSaveError) {
+                    Button("OK", role: .cancel) { }
+                } message: {
+                    Text(saveErrorMessage)
                 }
                 .tint(pantryAccentColor)
             }
@@ -422,6 +458,14 @@ struct ItemEditView: View {
                 let newItem = Item(name: name, quantity: quantity, notes: notesToSave, category: selectedCategory)
                 modelContext.insert(newItem)
             }
+            do {
+                try modelContext.save()
+                dismiss()
+            } catch {
+                modelContext.rollback()
+                saveErrorMessage = error.localizedDescription
+                isShowingSaveError = true
+            }
         }
     }
     
@@ -431,10 +475,16 @@ struct ItemEditView: View {
         
         let newCategory = Category(name: trimmedName)
         modelContext.insert(newCategory)
-        newCategoryName = ""
-        
-        DispatchQueue.main.async {
-            selectedCategoryName = newCategory.name
+        do {
+            try modelContext.save()
+            newCategoryName = ""
+            DispatchQueue.main.async {
+                selectedCategoryName = newCategory.name
+            }
+        } catch {
+            modelContext.rollback()
+            saveErrorMessage = error.localizedDescription
+            isShowingSaveError = true
         }
     }
 }
